@@ -12,7 +12,7 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.0"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $root
 
-if (git status --porcelain -- . ':!CMakeLists.txt') {
+if (git status --porcelain 2>$null) {
     Write-Host "Uncommitted changes will be included in this release commit:" -ForegroundColor Yellow
     git status --short
 }
@@ -41,11 +41,18 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
 [IO.File]::WriteAllText("$zip.sha256", "$hash  $name`n")
 
-git add -A
-if (git status --porcelain) { git commit -m "Release v$Version" }
-git tag "v$Version"
-git push origin HEAD --tags
+# Native tools write progress to stderr; judge them by exit code instead.
+function Run([scriptblock]$cmd) {
+    $ErrorActionPreference = "Continue"
+    & $cmd 2>&1 | ForEach-Object { "$_" }
+    if ($LASTEXITCODE -ne 0) { throw "Failed: $cmd" }
+}
+
+Run { git add -A }
+if (git status --porcelain) { Run { git commit -m "Release v$Version" } }
+if (-not (git tag -l "v$Version")) { Run { git tag "v$Version" } }
+Run { git push origin HEAD --tags }
 
 if (-not $Notes) { $Notes = "Instant Clip $Version" }
-gh release create "v$Version" $zip "$zip.sha256" --repo $Repo --title "v$Version" --notes $Notes
+Run { gh release create "v$Version" $zip "$zip.sha256" --repo $Repo --title "v$Version" --notes $Notes }
 Write-Host "Published v$Version. Running plugins will offer it within 6 hours, or on 'Check now'." -ForegroundColor Green
