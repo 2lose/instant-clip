@@ -79,7 +79,6 @@ private:
 	QWidget *updateBox_ = nullptr;
 	ui::Toast *updateToast_ = nullptr;
 	QLabel *updateStatus_ = nullptr;
-	QLineEdit *tokenEdit_ = nullptr;
 	void refreshUpdate();
 
 	QTimer tick_;

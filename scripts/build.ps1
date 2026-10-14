@@ -13,7 +13,6 @@ if (-not (Test-Path (Join-Path $root "deps\importlibs\obs.lib"))) {
     & (Join-Path $PSScriptRoot "make-import-libs.ps1")
 }
 
-& (Join-Path $PSScriptRoot "embed-token.ps1") -Out (Join-Path $root "build\gen\update-token.inc")
 & $cmake -S $root -B (Join-Path $root "build") -G "Visual Studio 17 2022" -A x64
 & $cmake --build (Join-Path $root "build") --config RelWithDebInfo
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }

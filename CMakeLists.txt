@@ -29,12 +29,6 @@ file(WRITE "${GEN_DIR}/obsconfig.h" "#pragma once\n#define OBS_RELEASE_CANDIDATE
 file(WRITE "${GEN_DIR}/libavutil/avconfig.h"
      "#ifndef AVUTIL_AVCONFIG_H\n#define AVUTIL_AVCONFIG_H\n#define AV_HAVE_BIGENDIAN 0\n#define AV_HAVE_FAST_UNALIGNED 1\n#endif\n")
 
-# Encrypted update token, written by scripts/embed-token.ps1 (build.ps1 runs it).
-if(NOT EXISTS "${GEN_DIR}/update-token.inc")
-  execute_process(COMMAND powershell -NoProfile -ExecutionPolicy Bypass -File
-                          "${CMAKE_CURRENT_SOURCE_DIR}/scripts/embed-token.ps1" -Out "${GEN_DIR}/update-token.inc")
-endif()
-
 set(MOC_HEADERS src/clip-manager.hpp src/updater.hpp)
 
 set(SOURCES
@@ -44,8 +38,6 @@ set(SOURCES
     src/trimmer.cpp
     src/trimmer.hpp
     src/updater.cpp
-    src/embedded-token.cpp
-    src/embedded-token.hpp
     src/updater.hpp
     src/sound.cpp
     src/sound.hpp
@@ -115,9 +107,7 @@ target_link_libraries(
           avutil
           swscale
           winmm
-          winhttp
-          crypt32
-          bcrypt)
+          winhttp)
 
 set_target_properties(instant-clip PROPERTIES PREFIX "" OUTPUT_NAME "instant-clip")
 
@@ -129,12 +119,6 @@ target_link_directories(trim-test PRIVATE "${IMPORT_LIB_DIR}")
 target_link_libraries(trim-test PRIVATE avformat avcodec avutil swscale)
 set_target_properties(trim-test PROPERTIES EXCLUDE_FROM_ALL ON)
 
-# Round-trip check for the encrypted update token.
-add_executable(token-test tests/token-test.cpp src/embedded-token.cpp)
-target_include_directories(token-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${GEN_DIR}")
-target_compile_definitions(token-test PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
-target_link_libraries(token-test PRIVATE bcrypt)
-set_target_properties(token-test PROPERTIES EXCLUDE_FROM_ALL ON)
 
 # Install layout OBS scans on Windows: %ProgramData%\obs-studio\plugins\<name>\{bin\64bit,data}
 set(PLUGIN_INSTALL_DIR "$ENV{ProgramData}/obs-studio/plugins/instant-clip" CACHE PATH "Plugin install dir")
