@@ -1,4 +1,4 @@
 build/
 deps/
 build-test/
-CLAUDE.md
+secrets/

@@ -2,10 +2,6 @@
 
 ShadowPlay-style "save the last N seconds" for OBS Studio, without an overlay. One replay buffer runs in the background; each clip length gets its own hotkey and dock button. Pressing one saves the buffer, then trims and remuxes it to the requested length in a single stream-copy pass.
 
-## Installing
-
-Download `instant-clip-x.y.z-windows-x64.zip` from [Releases](https://github.com/2lose/instant-clip/releases/latest), close OBS, and extract it into `C:\ProgramData\obs-studio\plugins\` so you end up with `C:\ProgramData\obs-studio\plugins\instant-clip\bin\64bit\instant-clip.dll`. Requires OBS Studio 32 on Windows x64. Later versions install themselves (see Updates).
-
 ## Using it
 
 1. In OBS: **Settings > Output > Replay Buffer**, enable it and set **Maximum Replay Time** to at least your longest clip length (the dock flags lengths the buffer can't hold).
@@ -24,9 +20,20 @@ Clips are named `Clip 2026-10-13 21-14-05 (30s).mp4` and saved to OBS's recordin
 
 ## Updates
 
-The plugin checks the [latest release](https://github.com/2lose/instant-clip/releases/latest) 20 seconds after OBS starts, then every 6 hours (or on **Settings > Updates > Check now**). No account or token is needed. When there's a newer version the dock shows **Update x.y.z available · Install**. Install downloads the release zip, verifies it against its `.sha256`, and copies it into the plugin folder after OBS closes (the DLL is locked while OBS runs). The next launch says "Updated to x.y.z".
+The plugin checks the latest release of the private repo `2lose/instant-clip` 20 seconds after OBS starts, then every 6 hours (or on **Settings > Updates > Check now**). When there's a newer version the dock shows **Update x.y.z available · Install**. Install downloads the release zip, verifies it against its `.sha256`, and copies it into the plugin folder after OBS closes (the DLL is locked while OBS runs). The next launch says "Updated to x.y.z".
 
-Publishing a version (maintainers, needs `gh` signed in):
+Access to the private repo comes from a read-only token built into the plugin, so updates work on any PC without signing in. Order of use: a token pasted into Settings > Updates (stored with Windows DPAPI), then the built-in one, then the GitHub CLI sign-in.
+
+The built-in token is read from `secrets/update-token.txt` (git-ignored) at build time and embedded AES-256 encrypted with a fresh key each build, so it never appears in the DLL as plain text. That stops casual extraction, not a determined one (the DLL has to carry the key), so the token must be limited to read-only access to this one repo:
+
+1. GitHub > Settings > Developer settings > Fine-grained tokens > Generate new token.
+2. Repository access: **Only select repositories** > `2lose/instant-clip`.
+3. Permissions: **Contents: Read-only** (Metadata read-only is added automatically). Nothing else.
+4. Save the token as the only line of `secrets/update-token.txt`.
+
+When it expires, make a new one, replace the file and publish a release before the old one lapses; installed copies pick up the new token with that update.
+
+Publishing a version (needs `gh` signed in):
 
 ```powershell
 .\scripts\release.ps1 1.2.0 "What changed"
@@ -70,6 +77,4 @@ $env:PATH = "C:\Program Files\obs-studio\bin\64bit;$env:PATH"
 - `src/trimmer.*`: FFmpeg trim/remux (fast stream copy and precise re-encode)
 - `src/ui/`: the dock (custom-painted widgets, Inter fonts in `data/fonts`)
 
-## License
-
-GPL-2.0 (see `LICENSE`), matching OBS Studio, which the plugin links against. Inter is © The Inter Project Authors, SIL Open Font License (see `data/fonts/Inter-LICENSE.txt`).
+Inter is © The Inter Project Authors, SIL Open Font License (see `data/fonts/Inter-LICENSE.txt`).
