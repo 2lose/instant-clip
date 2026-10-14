@@ -41,6 +41,26 @@ Publishing a version (needs `gh` signed in):
 
 That bumps the version in `CMakeLists.txt`, builds, packages `instant-clip-1.2.0-windows-x64.zip` plus `.sha256`, commits, tags `v1.2.0`, pushes and creates the GitHub release.
 
+## Feedback
+
+The **Feedback** card in the dock opens a form (Bug / Idea / Other, message, optional contact). It posts to the relay in `relay/`, a Cloudflare Worker that holds the Discord webhook as a secret, checks a shared key, rate-limits each IP and forwards the message to Discord. The webhook URL never ships in the plugin. See `relay/README.md`.
+
+## Build secrets
+
+Releases embed three values, encrypted at build time from git-ignored files in `secrets/`. They are never committed:
+
+| File | Purpose |
+| --- | --- |
+| `secrets/update-token.txt` | fine-grained, read-only token for update checks on this private repo |
+| `secrets/feedback-relay-url.txt` | the relay's `/feedback` URL |
+| `secrets/feedback-relay-key.txt` | shared key the relay checks (same value as its `RELAY_KEY` secret) |
+
+`release.ps1` refuses to publish if any is missing; local builds without them just lose updates/feedback.
+
+## Performance
+
+Trimming, update checks and downloads run on worker threads in Windows background mode (lowest CPU priority, low I/O and memory priority), so they yield to OBS's encoders and the game. Precise mode uses at most half the CPU cores. The dock does no periodic work while hidden.
+
 ## Building (Windows x64)
 
 The build links against the OBS you have installed instead of an OBS source build:

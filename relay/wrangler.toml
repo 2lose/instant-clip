@@ -2,6 +2,7 @@ name = "instant-clip-feedback"
 main = "src/worker.js"
 compatibility_date = "2026-09-01"
 workers_dev = true
+preview_urls = false
 
 # Per-IP limit on feedback posts.
 [[ratelimits]]

@@ -50,7 +50,8 @@ export default {
 		if (url.pathname !== "/feedback") return json({ error: "not_found" }, 404);
 		if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
-		if (!keyMatches(request.headers.get("x-instant-clip-key"), env.RELAY_KEY)) {
+		// trim(): secrets piped in from a shell can pick up a trailing newline.
+		if (!keyMatches(request.headers.get("x-instant-clip-key"), (env.RELAY_KEY || "").trim())) {
 			return json({ error: "forbidden" }, 403);
 		}
 
