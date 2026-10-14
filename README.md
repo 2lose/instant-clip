@@ -1,3 +1,7 @@
+# YO.
+
+This shit is definitely vibe coded.. I will not lie to u.. i didnt code a single piece of this shit. jus bein honest
+
 # Instant Clip (OBS plugin)
 
 ShadowPlay-style "save the last N seconds" for OBS Studio, without an overlay. One replay buffer runs in the background; each clip length gets its own hotkey and dock button. Pressing one saves the buffer, then trims and remuxes it to the requested length in a single stream-copy pass.
