@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(instant-clip VERSION 1.1.0 LANGUAGES C CXX)
+project(instant-clip VERSION 1.2.0 LANGUAGES C CXX)
 
 set(UPDATE_REPO "2lose/instant-clip" CACHE STRING "GitHub owner/repo the plugin checks for updates")
 
