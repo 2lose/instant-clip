@@ -1,5 +1,5 @@
-// Round-trip check for the embedded update token: build with INSTANT_CLIP_UPDATE_TOKEN set
-// to a dummy value, then run with the same value. Prints only match/mismatch, never the token.
+// Round-trip check for the embedded secrets: build with the INSTANT_CLIP_* env vars set
+// to dummy values, then run with the same values. Prints only match/mismatch, never values.
 #include "embedded-token.hpp"
 
 #include <cstdio>
@@ -7,13 +7,23 @@
 
 int main()
 {
-	const char *expected = std::getenv("INSTANT_CLIP_UPDATE_TOKEN");
-	std::string got = embedded_token();
-	if (!expected) {
-		std::printf("embedded token present: %s (%zu chars)\n", got.empty() ? "no" : "yes", got.size());
-		return 0;
+	struct {
+		Secret which;
+		const char *env;
+	} checks[] = {{Secret::UpdateToken, "INSTANT_CLIP_UPDATE_TOKEN"},
+		      {Secret::FeedbackUrl, "INSTANT_CLIP_FEEDBACK_URL"},
+		      {Secret::FeedbackKey, "INSTANT_CLIP_FEEDBACK_KEY"}};
+	int failures = 0;
+	for (auto &c : checks) {
+		std::string got = embedded_secret(c.which);
+		const char *expected = std::getenv(c.env);
+		if (!expected) {
+			std::printf("%s: embedded=%s (%zu chars)\n", c.env, got.empty() ? "no" : "yes", got.size());
+			continue;
+		}
+		bool ok = got == expected;
+		failures += !ok;
+		std::printf("%s: %s\n", c.env, ok ? "match" : "MISMATCH");
 	}
-	bool ok = got == expected;
-	std::printf("round trip: %s\n", ok ? "match" : "MISMATCH");
-	return ok ? 0 : 1;
+	return failures;
 }

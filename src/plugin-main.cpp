@@ -2,6 +2,7 @@
 #include <obs-module.h>
 
 #include "clip-manager.hpp"
+#include "feedback.hpp"
 #include "ui/clips-dock.hpp"
 
 OBS_DECLARE_MODULE()
@@ -34,5 +35,6 @@ bool obs_module_load(void)
 void obs_module_unload(void)
 {
 	obs_frontend_remove_event_callback(frontend_event, nullptr);
+	feedback_shutdown();
 	ClipManager::destroy();
 }

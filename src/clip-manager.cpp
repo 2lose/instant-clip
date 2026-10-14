@@ -1,5 +1,6 @@
 #include "clip-manager.hpp"
 
+#include "background.hpp"
 #include "sound.hpp"
 #include "updater.hpp"
 
@@ -591,6 +592,7 @@ QString ClipManager::uniqueClipPath(const PendingRequest &r) const
 
 void ClipManager::workerLoop()
 {
+	enter_background_mode();
 	while (true) {
 		Job job;
 		{

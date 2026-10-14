@@ -12,9 +12,17 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.0"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $root
 
-# A release without the embedded token couldn't update itself on PCs without gh.
-if (-not $env:INSTANT_CLIP_UPDATE_TOKEN -and -not (Test-Path (Join-Path $root "secrets\update-token.txt"))) {
-    throw "No update token: put a fine-grained, read-only token in secrets\update-token.txt (see README)."
+# Releases must carry every embedded value: without the token they can't update on PCs
+# without gh, and without the relay the Feedback button disappears.
+$required = @{
+    "update-token.txt"       = "INSTANT_CLIP_UPDATE_TOKEN"
+    "feedback-relay-url.txt" = "INSTANT_CLIP_FEEDBACK_URL"
+    "feedback-relay-key.txt" = "INSTANT_CLIP_FEEDBACK_KEY"
+}
+foreach ($file in $required.Keys) {
+    if (-not [Environment]::GetEnvironmentVariable($required[$file]) -and -not (Test-Path (Join-Path $root "secrets\$file"))) {
+        throw "Missing secrets\$file (see README)."
+    }
 }
 
 if (git status --porcelain 2>$null) {

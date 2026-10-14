@@ -2,6 +2,8 @@
 
 #include <string>
 
-// The update token embedded (encrypted) at build time, decrypted in memory.
-// Empty when the build had no token.
-std::string embedded_token();
+// Values embedded (encrypted) at build time by scripts/embed-secrets.ps1 and
+// decrypted in memory on use. Empty when the build didn't have that value.
+enum class Secret { UpdateToken, FeedbackUrl, FeedbackKey };
+
+std::string embedded_secret(Secret which);

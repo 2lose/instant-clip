@@ -1,0 +1,15 @@
+name = "instant-clip-feedback"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# Per-IP limit on feedback posts.
+[[ratelimits]]
+name = "FEEDBACK_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 3
+  period = 60
+
+# Secrets (never in this file): DISCORD_WEBHOOK, RELAY_KEY. See relay/README.md.

@@ -2,6 +2,7 @@
 
 #include "clip-manager.hpp"
 #include "updater.hpp"
+#include "feedback.hpp"
 #include "theme.hpp"
 #include "widgets.hpp"
 
@@ -11,6 +12,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPlainTextEdit>
 #include <QPainter>
 #include <QProcess>
 #include <QRegularExpression>
@@ -45,6 +47,10 @@ QString styleSheet()
 	color: %4; min-height: 36px; max-height: 36px; font-family: "Inter"; font-size: 14px; font-weight: 400;
 	selection-background-color: %5; selection-color: #10121a; }
 #ICRoot QLineEdit#ICPath:focus { border-color: %5; }
+#ICRoot QPlainTextEdit#ICText { background: %3; border: 1px solid %1; border-radius: 10px; padding: 8px 8px;
+	color: %4; font-family: "Inter"; font-size: 14px; font-weight: 400;
+	selection-background-color: %5; selection-color: #10121a; }
+#ICRoot QPlainTextEdit#ICText:focus { border-color: %5; }
 )")
 		.arg(border.name(), borderHover.name(), surface.name(), textColor.name(), accent.name());
 }
@@ -78,6 +84,7 @@ ClipsDock::ClipsDock(QWidget *parent) : QWidget(parent), m_(ClipManager::get())
 	stack_ = new QStackedWidget(this);
 	stack_->addWidget(buildMain());
 	stack_->addWidget(buildSettings());
+	stack_->addWidget(buildFeedback());
 	auto *layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->addWidget(stack_);
@@ -137,8 +144,10 @@ ClipsDock::ClipsDock(QWidget *parent) : QWidget(parent), m_(ClipManager::get())
 	connect(m_->updater(), &Updater::stateChanged, this, [this] { refreshUpdate(); });
 	connect(m_->updater(), &Updater::settingsChanged, this, [this] { refreshUpdate(); });
 
-	tick_.setInterval(10000);
+	tick_.setInterval(30000);
 	connect(&tick_, &QTimer::timeout, this, [this] {
+		if (!isVisible())
+			return; // showEvent refreshes everything when the dock comes back
 		refreshBuffer(); // picks up replay-time changes made in OBS's settings
 		refreshRecent(); // "12 min ago"
 	});
@@ -304,12 +313,22 @@ QWidget *ClipsDock::buildMain()
 
 	v->addStretch(1);
 	v->addSpacing(20);
-	auto *settings = new SettingsEntry;
+	auto *settings = new SettingsEntry("Settings", Icon::Sliders);
 	connect(settings, &QAbstractButton::clicked, this, [this] {
 		refreshSettings();
 		stack_->setCurrentIndex(1);
 	});
 	v->addWidget(settings);
+
+	if (feedback_available()) {
+		v->addSpacing(8);
+		auto *feedback = new SettingsEntry("Feedback", Icon::Message);
+		connect(feedback, &QAbstractButton::clicked, this, [this] {
+			stack_->setCurrentIndex(2);
+			fbMessage_->setFocus();
+		});
+		v->addWidget(feedback);
+	}
 
 	return scrollPage(page);
 }
@@ -539,6 +558,125 @@ QWidget *ClipsDock::buildSettings()
 
 	v->addStretch(1);
 	return scrollPage(page);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Feedback view                                                             */
+
+namespace {
+constexpr int kFeedbackMaxChars = 2000;
+constexpr int kFeedbackCooldownMs = 30000;
+} // namespace
+
+QWidget *ClipsDock::buildFeedback()
+{
+	auto *page = new QWidget;
+	page->setObjectName("ICPage");
+	auto *v = new QVBoxLayout(page);
+	v->setContentsMargins(padding, padding - 4, padding, padding);
+	v->setSpacing(0);
+
+	auto *header = row();
+	auto *hg = new QGridLayout(header);
+	hg->setContentsMargins(0, 0, 0, 0);
+	auto *back = new PillButton("Clips", PillButton::Kind::Ghost, PillButton::Lead::Back);
+	connect(back, &QAbstractButton::clicked, this, [this] { stack_->setCurrentIndex(0); });
+	hg->addWidget(makeLabel("Feedback", makeFont(20, 700, Face::Display), textColor), 0, 0, Qt::AlignCenter);
+	hg->addWidget(back, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
+	v->addWidget(header);
+	v->addSpacing(18);
+
+	v->addWidget(sectionLabel("Type"));
+	v->addSpacing(10);
+	fbKind_ = new Segmented({"Bug", "Idea", "Other"});
+	v->addWidget(fbKind_);
+	v->addSpacing(20);
+
+	auto *msgHeader = row();
+	auto *mh = new QHBoxLayout(msgHeader);
+	mh->setContentsMargins(0, 0, 0, 0);
+	mh->addWidget(sectionLabel("Message"));
+	mh->addStretch(1);
+	fbCount_ = makeLabel(QString("0 / %1").arg(kFeedbackMaxChars), makeFont(12, 400, Face::Text, true), muted);
+	mh->addWidget(fbCount_);
+	v->addWidget(msgHeader);
+	v->addSpacing(10);
+	fbMessage_ = new QPlainTextEdit;
+	fbMessage_->setObjectName("ICText");
+	fbMessage_->setPlaceholderText("What happened, or what would make Clips better?");
+	fbMessage_->setTabChangesFocus(true);
+	fbMessage_->setMinimumHeight(120);
+	fbMessage_->setMaximumHeight(200);
+	connect(fbMessage_, &QPlainTextEdit::textChanged, this, [this] {
+		QString text = fbMessage_->toPlainText();
+		if (text.size() > kFeedbackMaxChars) {
+			QSignalBlocker block(fbMessage_);
+			fbMessage_->setPlainText(text.left(kFeedbackMaxChars));
+			fbMessage_->moveCursor(QTextCursor::End);
+			text = fbMessage_->toPlainText();
+		}
+		fbCount_->setText(QString("%1 / %2").arg(text.size()).arg(kFeedbackMaxChars));
+	});
+	v->addWidget(fbMessage_);
+	v->addSpacing(20);
+
+	v->addWidget(sectionLabel("Contact (optional)"));
+	v->addSpacing(10);
+	fbContact_ = new QLineEdit;
+	fbContact_->setObjectName("ICPath");
+	fbContact_->setMaxLength(100);
+	fbContact_->setPlaceholderText("Discord or email, if you'd like a reply");
+	v->addWidget(fbContact_);
+	v->addSpacing(8);
+	v->addWidget(hintLabel("Sends your message plus the plugin, OBS and Windows versions. Nothing else."));
+	v->addSpacing(16);
+
+	fbSend_ = new PillButton("Send feedback", PillButton::Kind::Primary);
+	fbSend_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	connect(fbSend_, &QAbstractButton::clicked, this, [this] { sendFeedback(); });
+	v->addWidget(fbSend_);
+	v->addSpacing(12);
+	fbToast_ = new Toast;
+	v->addWidget(fbToast_);
+
+	v->addStretch(1);
+	return scrollPage(page);
+}
+
+void ClipsDock::sendFeedback()
+{
+	QString message = fbMessage_->toPlainText().trimmed();
+	if (message.size() < 3) {
+		fbToast_->showMessage(Toast::Kind::Warning, "Write a message first", {}, {}, {}, 5000);
+		fbMessage_->setFocus();
+		return;
+	}
+	if (fbLastSent_.isValid() && fbLastSent_.elapsed() < kFeedbackCooldownMs) {
+		int wait = (int)((kFeedbackCooldownMs - fbLastSent_.elapsed()) / 1000) + 1;
+		fbToast_->showMessage(Toast::Kind::Warning, QString("Wait %1s before sending more").arg(wait), {}, {}, {},
+				      5000);
+		return;
+	}
+
+	static const char *kinds[] = {"bug", "idea", "other"};
+	FeedbackForm form{kinds[fbKind_->current()], message, fbContact_->text().trimmed()};
+
+	fbSend_->setEnabled(false);
+	fbSend_->setText("Sending...");
+	fbToast_->setVisible(false);
+	send_feedback(form, this, [this](bool ok, const QString &error) {
+		fbSend_->setEnabled(true);
+		fbSend_->setText("Send feedback");
+		if (!ok) {
+			fbToast_->showMessage(Toast::Kind::Error, "Couldn't send feedback", error);
+			return;
+		}
+		fbLastSent_.start();
+		fbMessage_->clear();
+		fbContact_->clear();
+		fbKind_->setCurrent(0);
+		fbToast_->showMessage(Toast::Kind::Success, "Thanks! Feedback sent.", {}, {}, {}, 8000);
+	});
 }
 
 void ClipsDock::rebuildChips()

@@ -32,7 +32,7 @@ void loadFonts();
 enum class Face { Text, Display };
 QFont makeFont(int px, int weight, Face face = Face::Text, bool tabular = false);
 
-enum class Icon { Play, External, Check, Sliders, ChevronDown, ChevronLeft, Stop, Warning, Close, Folder, Spinner, Download };
+enum class Icon { Play, External, Check, Sliders, ChevronDown, ChevronLeft, Stop, Warning, Close, Folder, Spinner, Download, Message };
 void drawIcon(QPainter &p, Icon icon, const QRectF &rect, const QColor &color);
 
 QColor mix(const QColor &a, const QColor &b, double t);

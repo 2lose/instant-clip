@@ -384,9 +384,15 @@ Toast::Toast(QWidget *parent) : QWidget(parent)
 {
 	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 	setMouseTracking(true);
-	spinTimer_.setInterval(30);
+	spinTimer_.setInterval(40);
 	connect(&spinTimer_, &QTimer::timeout, this, [this] {
-		spin_ = (spin_ + 12) % 360;
+		// Off-screen (dock hidden or tabbed away): stop waking up. The next
+		// progress update restarts it.
+		if (!isVisible()) {
+			spinTimer_.stop();
+			return;
+		}
+		spin_ = (spin_ + 15) % 360;
 		update();
 	});
 	hideTimer_.setSingleShot(true);
@@ -940,9 +946,9 @@ void AddChip::paintEvent(QPaintEvent *)
 
 /* ------------------------------------------------------------------------ */
 
-SettingsEntry::SettingsEntry(QWidget *parent) : QAbstractButton(parent)
+SettingsEntry::SettingsEntry(const QString &label, Icon icon, QWidget *parent) : QAbstractButton(parent), icon_(icon)
 {
-	setText("Settings");
+	setText(label);
 	setCursor(Qt::PointingHandCursor);
 	setFocusPolicy(Qt::TabFocus);
 	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -967,7 +973,7 @@ void SettingsEntry::paintEvent(QPaintEvent *)
 	QRectF r = rect();
 	roundRect(p, r, radius, hover_ ? mix(surface, surface2, 0.6) : surface, hover_ ? borderHover : border);
 	qreal cy = r.height() / 2;
-	drawIcon(p, Icon::Sliders, QRectF(14, cy - 9, 18, 18), muted);
+	drawIcon(p, icon_, QRectF(14, cy - 9, 18, 18), muted);
 	drawText(p, QRectF(42, 0, r.width() - 80, r.height()), Qt::AlignLeft | Qt::AlignVCenter, text(), makeFont(15, 600),
 		 textColor);
 	drawIcon(p, Icon::ChevronDown, QRectF(r.width() - 14 - 18, cy - 9, 18, 18), muted);

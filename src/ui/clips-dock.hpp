@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QElapsedTimer>
 #include <QList>
 #include <QMap>
 #include <QTimer>
@@ -8,6 +9,7 @@
 class QGridLayout;
 class QLabel;
 class QLineEdit;
+class QPlainTextEdit;
 class QStackedWidget;
 class ClipManager;
 
@@ -38,6 +40,8 @@ protected:
 private:
 	QWidget *buildMain();
 	QWidget *buildSettings();
+	QWidget *buildFeedback();
+	void sendFeedback();
 
 	void refreshBuffer();
 	void rebuildClipButtons();
@@ -81,6 +85,15 @@ private:
 	QLabel *updateStatus_ = nullptr;
 	QLineEdit *tokenEdit_ = nullptr;
 	void refreshUpdate();
+
+	// Feedback view
+	ui::Segmented *fbKind_ = nullptr;
+	QPlainTextEdit *fbMessage_ = nullptr;
+	QLineEdit *fbContact_ = nullptr;
+	QLabel *fbCount_ = nullptr;
+	ui::PillButton *fbSend_ = nullptr;
+	ui::Toast *fbToast_ = nullptr;
+	QElapsedTimer fbLastSent_;
 
 	QTimer tick_;
 };

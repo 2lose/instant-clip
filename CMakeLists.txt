@@ -29,10 +29,10 @@ file(WRITE "${GEN_DIR}/obsconfig.h" "#pragma once\n#define OBS_RELEASE_CANDIDATE
 file(WRITE "${GEN_DIR}/libavutil/avconfig.h"
      "#ifndef AVUTIL_AVCONFIG_H\n#define AVUTIL_AVCONFIG_H\n#define AV_HAVE_BIGENDIAN 0\n#define AV_HAVE_FAST_UNALIGNED 1\n#endif\n")
 
-# Encrypted update token, written by scripts/embed-token.ps1 (build.ps1 runs it).
-if(NOT EXISTS "${GEN_DIR}/update-token.inc")
+# Encrypted build secrets, written by scripts/embed-secrets.ps1 (build.ps1 runs it).
+if(NOT EXISTS "${GEN_DIR}/embedded-secrets.inc")
   execute_process(COMMAND powershell -NoProfile -ExecutionPolicy Bypass -File
-                          "${CMAKE_CURRENT_SOURCE_DIR}/scripts/embed-token.ps1" -Out "${GEN_DIR}/update-token.inc")
+                          "${CMAKE_CURRENT_SOURCE_DIR}/scripts/embed-secrets.ps1" -Out "${GEN_DIR}/embedded-secrets.inc")
 endif()
 
 set(MOC_HEADERS src/clip-manager.hpp src/updater.hpp)
@@ -44,6 +44,11 @@ set(SOURCES
     src/trimmer.cpp
     src/trimmer.hpp
     src/updater.cpp
+    src/http.cpp
+    src/http.hpp
+    src/feedback.cpp
+    src/feedback.hpp
+    src/background.hpp
     src/embedded-token.cpp
     src/embedded-token.hpp
     src/updater.hpp

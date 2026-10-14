@@ -7,18 +7,25 @@
 #include <bcrypt.h>
 
 namespace {
-#include "update-token.inc"
-}
 
-// AES-256-CBC, key split in two arrays; see scripts/embed-token.ps1.
-std::string embedded_token()
+struct EmbeddedBlob {
+	const unsigned char *cipher;
+	size_t size;
+	unsigned char iv[16];
+	unsigned char keyA[32];
+	unsigned char keyB[32]; // key = keyA ^ keyB
+};
+
+#include "embedded-secrets.inc"
+
+std::string decrypt(const EmbeddedBlob &blob)
 {
-	if (kTokCipherLen == 0)
+	if (!blob.cipher || blob.size == 0)
 		return {};
 	unsigned char key[32], iv[16];
 	for (int i = 0; i < 32; i++)
-		key[i] = kTokKeyA[i] ^ kTokKeyB[i];
-	memcpy(iv, kTokIv, sizeof(iv));
+		key[i] = blob.keyA[i] ^ blob.keyB[i];
+	memcpy(iv, blob.iv, sizeof(iv));
 
 	std::string result;
 	BCRYPT_ALG_HANDLE alg = nullptr;
@@ -27,10 +34,10 @@ std::string embedded_token()
 	    BCRYPT_SUCCESS(BCryptSetProperty(alg, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CBC,
 					     sizeof(BCRYPT_CHAIN_MODE_CBC), 0)) &&
 	    BCRYPT_SUCCESS(BCryptGenerateSymmetricKey(alg, &handle, nullptr, 0, key, sizeof(key), 0))) {
-		std::vector<unsigned char> plain(kTokCipherLen);
+		std::vector<unsigned char> plain(blob.size);
 		ULONG len = 0;
-		if (BCRYPT_SUCCESS(BCryptDecrypt(handle, (PUCHAR)kTokCipher, (ULONG)kTokCipherLen, nullptr, iv,
-						 sizeof(iv), plain.data(), (ULONG)plain.size(), &len, BCRYPT_BLOCK_PADDING)))
+		if (BCRYPT_SUCCESS(BCryptDecrypt(handle, (PUCHAR)blob.cipher, (ULONG)blob.size, nullptr, iv, sizeof(iv),
+						 plain.data(), (ULONG)plain.size(), &len, BCRYPT_BLOCK_PADDING)))
 			result.assign((const char *)plain.data(), len);
 		SecureZeroMemory(plain.data(), plain.size());
 	}
@@ -42,3 +49,17 @@ std::string embedded_token()
 	return result;
 }
 
+} // namespace
+
+std::string embedded_secret(Secret which)
+{
+	switch (which) {
+	case Secret::UpdateToken:
+		return decrypt(kUpdateToken);
+	case Secret::FeedbackUrl:
+		return decrypt(kFeedbackUrl);
+	case Secret::FeedbackKey:
+		return decrypt(kFeedbackKey);
+	}
+	return {};
+}

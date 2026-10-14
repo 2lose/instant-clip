@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QAbstractButton>
 #include <QBoxLayout>
@@ -44,7 +44,7 @@ private:
 	bool hover_ = false;
 };
 
-// "Buffer live Â· holds 5:00" / "Buffer off Â· max 2:00"
+// "Buffer live, holds 5:00" / "Buffer off, max 2:00"
 class StatusCard : public QWidget {
 public:
 	explicit StatusCard(QWidget *parent = nullptr);
@@ -204,7 +204,7 @@ private:
 	int hover_ = -1;
 };
 
-// "30s Ã—" pill in the clip-length editor.
+// "30s x" pill in the clip-length editor.
 class Chip : public QAbstractButton {
 public:
 	Chip(const QString &text, QWidget *parent = nullptr);
@@ -245,10 +245,10 @@ private:
 	bool invalid_ = false;
 };
 
-// "Settings âŒ„" entry at the bottom of the main view.
+// Card-style entry at the bottom of the main view ("Settings", "Feedback").
 class SettingsEntry : public QAbstractButton {
 public:
-	explicit SettingsEntry(QWidget *parent = nullptr);
+	SettingsEntry(const QString &label, theme::Icon icon, QWidget *parent = nullptr);
 	QSize sizeHint() const override { return {200, 44}; }
 	QSize minimumSizeHint() const override { return {120, 44}; }
 
@@ -258,6 +258,7 @@ protected:
 	void leaveEvent(QEvent *) override;
 
 private:
+	theme::Icon icon_;
 	bool hover_ = false;
 };
 

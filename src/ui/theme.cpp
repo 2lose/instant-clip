@@ -77,6 +77,8 @@ const char *iconBody(Icon icon)
 		return R"(<path d="M7 7l10 10"/><path d="M17 7L7 17"/>)";
 	case Icon::Folder:
 		return R"(<path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4.2l2 2.2H19a1.5 1.5 0 0 1 1.5 1.5v8.3A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18z"/>)";
+	case Icon::Message:
+		return R"(<path d="M5 5.5h14A1.5 1.5 0 0 1 20.5 7v8.5A1.5 1.5 0 0 1 19 17h-8.5l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z"/>)";
 	case Icon::Download:
 		return R"(<path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/>)";
 	case Icon::Spinner:

@@ -1,5 +1,7 @@
 #include "trimmer.hpp"
 
+#include "background.hpp"
+
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
@@ -517,7 +519,7 @@ CodecPtr open_encoder(const AVFrame *frame, AVStream *is, AVRational fps, int64_
 		enc->chroma_sample_location = frame->chroma_location;
 		enc->gop_size = fps.num > 0 && fps.den > 0 ? std::max(1, 2 * fps.num / fps.den) : 120;
 		enc->max_b_frames = 0;
-		enc->thread_count = 0;
+		enc->thread_count = ffmpeg_thread_budget();
 		if (globalHeader)
 			enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
@@ -565,7 +567,7 @@ PreciseOutcome run_precise(Input &in, const Request &req, Result &res)
 	CodecPtr dec(avcodec_alloc_context3(decoder));
 	avcodec_parameters_to_context(dec.get(), vs->codecpar);
 	dec->pkt_timebase = vs->time_base;
-	dec->thread_count = 0;
+	dec->thread_count = ffmpeg_thread_budget();
 	if (avcodec_open2(dec.get(), decoder, nullptr) < 0)
 		return PreciseOutcome::Unsupported;
 
