@@ -36,8 +36,15 @@ Copy-Item -Recurse (Join-Path $root "data") $stage
 $name = "instant-clip-$Version-windows-x64.zip"
 $zip = Join-Path $out $name
 Remove-Item $zip, "$zip.sha256" -ErrorAction SilentlyContinue
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-[IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip, [IO.Compression.CompressionLevel]::Optimal, $true)
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+# Entries written one by one so they use '/' separators (Windows PowerShell's helpers write '\').
+$archive = [IO.Compression.ZipFile]::Open($zip, [IO.Compression.ZipArchiveMode]::Create)
+$base = Split-Path $stage -Parent
+foreach ($file in Get-ChildItem $stage -Recurse -File) {
+    $entry = $file.FullName.Substring($base.Length + 1).Replace('\', '/')
+    [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $entry, [IO.Compression.CompressionLevel]::Optimal)
+}
+$archive.Dispose()
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
 [IO.File]::WriteAllText("$zip.sha256", "$hash  $name`n")
 
