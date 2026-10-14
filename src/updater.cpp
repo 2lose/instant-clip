@@ -1,5 +1,7 @@
 #include "updater.hpp"
 
+#include "embedded-token.hpp"
+
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
@@ -11,6 +13,7 @@
 #include <obs-module.h>
 
 #include <windows.h>
+#include <bcrypt.h>
 #include <dpapi.h>
 #include <winhttp.h>
 
@@ -325,6 +328,9 @@ std::string Updater::token() const
 		if (!plain.isEmpty())
 			return plain.toStdString();
 	}
+	std::string builtIn = embedded_token();
+	if (!builtIn.empty())
+		return builtIn;
 	return gh_cli_token();
 }
 
@@ -388,8 +394,8 @@ void Updater::check(bool manual)
 		if (!res.error.empty()) {
 			err = QString::fromStdString(res.error);
 		} else if (res.status == 404 || res.status == 401 || res.status == 403) {
-			err = tok.empty() ? "Can't see the update repo. Sign in with GitHub CLI (gh auth login) or add a token "
-					    "below."
+			err = tok.empty() ? "This build has no update access. Rebuild with secrets\\update-token.txt or add a token "
+					    "in Settings > Updates."
 					  : QString("GitHub refused access to %1 (HTTP %2). Check the token.")
 						    .arg(repo())
 						    .arg(res.status);

@@ -22,7 +22,16 @@ Clips are named `Clip 2026-10-13 21-14-05 (30s).mp4` and saved to OBS's recordin
 
 The plugin checks the latest release of the private repo `2lose/instant-clip` 20 seconds after OBS starts, then every 6 hours (or on **Settings > Updates > Check now**). When there's a newer version the dock shows **Update x.y.z available · Install**. Install downloads the release zip, verifies it against its `.sha256`, and copies it into the plugin folder after OBS closes (the DLL is locked while OBS runs). The next launch says "Updated to x.y.z".
 
-Access to the private repo comes from the GitHub CLI sign-in (`gh auth token`). To use a token instead, create a fine-grained token with read-only **Contents** access to the repo and paste it into Settings > Updates; it's stored encrypted with Windows DPAPI.
+Access to the private repo comes from a read-only token built into the plugin, so updates work on any PC without signing in. Order of use: a token pasted into Settings > Updates (stored with Windows DPAPI), then the built-in one, then the GitHub CLI sign-in.
+
+The built-in token is read from `secrets/update-token.txt` (git-ignored) at build time and embedded AES-256 encrypted with a fresh key each build, so it never appears in the DLL as plain text. That stops casual extraction, not a determined one (the DLL has to carry the key), so the token must be limited to read-only access to this one repo:
+
+1. GitHub > Settings > Developer settings > Fine-grained tokens > Generate new token.
+2. Repository access: **Only select repositories** > `2lose/instant-clip`.
+3. Permissions: **Contents: Read-only** (Metadata read-only is added automatically). Nothing else.
+4. Save the token as the only line of `secrets/update-token.txt`.
+
+When it expires, make a new one, replace the file and publish a release before the old one lapses; installed copies pick up the new token with that update.
 
 Publishing a version (needs `gh` signed in):
 

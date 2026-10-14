@@ -12,6 +12,11 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.0"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $root
 
+# A release without the embedded token couldn't update itself on PCs without gh.
+if (-not $env:INSTANT_CLIP_UPDATE_TOKEN -and -not (Test-Path (Join-Path $root "secrets\update-token.txt"))) {
+    throw "No update token: put a fine-grained, read-only token in secrets\update-token.txt (see README)."
+}
+
 if (git status --porcelain 2>$null) {
     Write-Host "Uncommitted changes will be included in this release commit:" -ForegroundColor Yellow
     git status --short

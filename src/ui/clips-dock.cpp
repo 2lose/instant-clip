@@ -206,7 +206,7 @@ void ClipsDock::refreshUpdate()
 		updateBox_->setVisible(banner);
 
 	updateStatus_->setText(status);
-	tokenEdit_->setPlaceholderText(u->hasStoredToken() ? "Token saved (hidden)" : "Paste a token (optional)");
+	tokenEdit_->setPlaceholderText(u->hasStoredToken() ? "Token saved (hidden)" : "Override token (optional)");
 	if (auto *clear = findChild<QWidget *>("ICClearToken"))
 		clear->setVisible(u->hasStoredToken());
 }
@@ -525,8 +525,8 @@ QWidget *ClipsDock::buildSettings()
 	});
 	v->addWidget(tokenEdit_);
 	v->addSpacing(8);
-	v->addWidget(hintLabel(QString("Optional GitHub token with read access to %1. Without one, your GitHub CLI "
-				       "sign-in is used. Stored encrypted for your Windows account.")
+	v->addWidget(hintLabel(QString("Updates from %1 use the access built into this plugin. Paste a token only to "
+				       "override it; it's stored encrypted for your Windows account.")
 				       .arg(Updater::repo())));
 	auto *clearToken = new PillButton("Forget saved token", PillButton::Kind::Link);
 	connect(clearToken, &QAbstractButton::clicked, this, [this] {
