@@ -229,7 +229,7 @@ void StatusCard::paintEvent(QPaintEvent *)
 	p.setPen(Qt::NoPen);
 	if (live_) {
 		QColor halo = live;
-		halo.setAlphaF(0.22);
+		halo.setAlphaF(0.22f);
 		p.setBrush(halo);
 		p.drawEllipse(dot, 8, 8);
 	}

@@ -3,3 +3,7 @@ deps/
 build-test/
 secrets/
 CLAUDE.md
+.deps/
+build_x64/
+cmake/.CMakeBuildNumber
+*.lock.json

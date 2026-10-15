@@ -1,6 +1,8 @@
-# Instant Clip
+# YO.
 
-> **Disclaimer:** This plugin was coded by Claude, Anthropic's AI, using Claude Code.
+This shit is definitely vibe coded.. I will not lie to u.. i didnt code a single piece of this shit. jus bein honest
+
+# Instant Clip
 
 Instant Clip is an OBS plugin that helps you make the most of your replay buffer by letting you clip any length within your replay buffer's interval. For example, you can clip the last 30s out of your 5m replay buffer cache, or clip the whole 5m.
 
@@ -8,30 +10,38 @@ Each clip length gets its own hotkey and a button in the **Clips** dock. No over
 
 ## Building from source
 
-If you've edited the source, you can build and install the plugin yourself.
+If you've edited the source, you can build the plugin yourself. It uses the standard OBS plugin build setup (CMake presets), so there are no scripts to run.
 
 **Requirements**
 
 - Windows 10 or 11 (64-bit)
-- [OBS Studio](https://obsproject.com) 32 or newer, installed
-- [Visual Studio 2022 Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) with the **Desktop development with C++** workload
+- [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/) (Community or Build Tools) with the **Desktop development with C++** workload
 - [Git](https://git-scm.com)
 
-**Steps**
+**Build**
 
-1. Clone the repo and open PowerShell in the project folder.
-2. Close OBS (Windows locks the plugin file while OBS is running).
-3. Run:
+In a terminal in the project folder:
 
-   ```powershell
-   .\scripts\build.ps1
-   ```
+```
+cmake --preset windows-x64
+cmake --build --preset windows-x64
+```
 
-The first build downloads the headers matching your installed OBS (about 300 MB, saved in `deps\`), then compiles the plugin and installs it into OBS. Later builds skip the download.
+Or open the folder in Visual Studio or VS Code (with the CMake Tools extension), pick the **Windows x64** preset and build.
 
-To build without installing, use `.\scripts\build.ps1 -NoInstall`. The plugin is then at `build\RelWithDebInfo\instant-clip.dll`.
+The first configure downloads the OBS source code and its dependencies (about 1 GB, into `.deps\`) and takes a few minutes. After that, builds are quick.
 
-Builds from source don't include the update checker's access token or the feedback form's relay, so those two features stay off. Everything else works the same. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for details.
+**Install your build into OBS**
+
+Close OBS, then run:
+
+```
+cmake --install build_x64 --config RelWithDebInfo
+```
+
+This copies the plugin to `C:\ProgramData\obs-studio\plugins\instant-clip`. If you get an access error, run the terminal as administrator.
+
+Builds from source don't include the update checker's access token or the feedback form's relay, so those two features stay off. Everything else works the same. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for more.
 
 ## Installing
 

@@ -1,5 +1,5 @@
-# Encrypts the build's secrets into a generated header (build\gen\embedded-secrets.inc,
-# never committed). Plaintext only lives in git-ignored secrets\*.txt files (or env vars):
+# Release-only: release.ps1 runs this. Encrypts the build's secrets into a generated header
+# (build_x64\gen\embedded-secrets.inc, never committed). Plaintext only lives in git-ignored secrets\*.txt files (or env vars):
 #
 #   secrets\update-token.txt         INSTANT_CLIP_UPDATE_TOKEN   read-only token for update checks
 #   secrets\feedback-relay-url.txt   INSTANT_CLIP_FEEDBACK_URL   feedback relay endpoint (Cloudflare Worker)

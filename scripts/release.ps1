@@ -30,21 +30,31 @@ if (git status --porcelain 2>$null) {
     git status --short
 }
 
-# Version lives in CMakeLists.txt (project(... VERSION x.y.z ...)).
-$cmakeLists = Join-Path $root "CMakeLists.txt"
-$text = [IO.File]::ReadAllText($cmakeLists)
-$text = [regex]::Replace($text, 'project\(instant-clip VERSION \d+\.\d+\.\d+', "project(instant-clip VERSION $Version")
-[IO.File]::WriteAllText($cmakeLists, $text)
+# Version lives in buildspec.json (the top-level "version", right after "displayName").
+$buildspec = Join-Path $root "buildspec.json"
+$text = [IO.File]::ReadAllText($buildspec)
+$text = [regex]::Replace($text, '("displayName":\s*"[^"]*",\s*"version":\s*")[^"]+', "`${1}$Version")
+[IO.File]::WriteAllText($buildspec, $text)
 
-& (Join-Path $PSScriptRoot "build.ps1") -NoInstall
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+$vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+$cmake = Join-Path $vs "Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
 
-# Package: instant-clip/bin/64bit/instant-clip.dll + instant-clip/data/...
-$out = Join-Path $root "build\release"
-$stage = Join-Path $out "stage\instant-clip"
-Remove-Item -Recurse -Force (Join-Path $out "stage") -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force (Join-Path $stage "bin\64bit") | Out-Null
-Copy-Item (Join-Path $root "build\RelWithDebInfo\instant-clip.dll") (Join-Path $stage "bin\64bit")
-Copy-Item -Recurse (Join-Path $root "data") $stage
+# Encrypt this release's values into the build, then build with the standard preset.
+& (Join-Path $PSScriptRoot "embed-secrets.ps1") -Out (Join-Path $root "build_x64\gen\embedded-secrets.inc")
+& $cmake --preset windows-x64
+if ($LASTEXITCODE -ne 0) { throw "Configure failed" }
+& $cmake --build --preset windows-x64
+if ($LASTEXITCODE -ne 0) { throw "Build failed" }
+
+# Package: instant-clip/bin/64bit/instant-clip.dll + instant-clip/data/... (no .pdb)
+$out = Join-Path $root "build_x64\release"
+$stageRoot = Join-Path $out "stage"
+$stage = Join-Path $stageRoot "instant-clip"
+if (Test-Path $stageRoot) { [IO.Directory]::Delete($stageRoot, $true) }
+& $cmake --install (Join-Path $root "build_x64") --config RelWithDebInfo --prefix $stageRoot
+if ($LASTEXITCODE -ne 0) { throw "Install to staging failed" }
+Get-ChildItem $stage -Recurse -Filter *.pdb | ForEach-Object { [IO.File]::Delete($_.FullName) }
 
 $name = "instant-clip-$Version-windows-x64.zip"
 $zip = Join-Path $out $name
