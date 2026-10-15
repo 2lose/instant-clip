@@ -9,9 +9,7 @@ $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.e
 $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 $cmake = Join-Path $vs "Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
 
-if (-not (Test-Path (Join-Path $root "deps\importlibs\obs.lib"))) {
-    & (Join-Path $PSScriptRoot "make-import-libs.ps1")
-}
+& (Join-Path $PSScriptRoot "fetch-deps.ps1") -DepsDir (Join-Path $root "deps")
 
 & (Join-Path $PSScriptRoot "embed-secrets.ps1") -Out (Join-Path $root "build\gen\embedded-secrets.inc")
 & $cmake -S $root -B (Join-Path $root "build") -G "Visual Studio 17 2022" -A x64
