@@ -8,6 +8,15 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Native tools (git, gh, cmake) write progress and warnings to stderr, which Windows
+# PowerShell would treat as fatal here; judge them by exit code instead.
+function Run([scriptblock]$cmd) {
+    $ErrorActionPreference = "Continue"
+    & $cmd 2>&1 | ForEach-Object { "$_" }
+    if ($LASTEXITCODE -ne 0) { throw "Failed: $cmd" }
+}
+
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.0" }
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $root
@@ -42,18 +51,15 @@ $cmake = Join-Path $vs "Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\c
 
 # Encrypt this release's values into the build, then build with the standard preset.
 & (Join-Path $PSScriptRoot "embed-secrets.ps1") -Out (Join-Path $root "build_x64\gen\embedded-secrets.inc")
-& $cmake --preset windows-x64
-if ($LASTEXITCODE -ne 0) { throw "Configure failed" }
-& $cmake --build --preset windows-x64
-if ($LASTEXITCODE -ne 0) { throw "Build failed" }
+Run { & $cmake --preset windows-x64 }
+Run { & $cmake --build --preset windows-x64 }
 
 # Package: instant-clip/bin/64bit/instant-clip.dll + instant-clip/data/... (no .pdb)
 $out = Join-Path $root "build_x64\release"
 $stageRoot = Join-Path $out "stage"
 $stage = Join-Path $stageRoot "instant-clip"
 if (Test-Path $stageRoot) { [IO.Directory]::Delete($stageRoot, $true) }
-& $cmake --install (Join-Path $root "build_x64") --config RelWithDebInfo --prefix $stageRoot
-if ($LASTEXITCODE -ne 0) { throw "Install to staging failed" }
+Run { & $cmake --install (Join-Path $root "build_x64") --config RelWithDebInfo --prefix $stageRoot }
 Get-ChildItem $stage -Recurse -Filter *.pdb | ForEach-Object { [IO.File]::Delete($_.FullName) }
 
 $name = "instant-clip-$Version-windows-x64.zip"
@@ -70,13 +76,6 @@ foreach ($file in Get-ChildItem $stage -Recurse -File) {
 $archive.Dispose()
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
 [IO.File]::WriteAllText("$zip.sha256", "$hash  $name`n")
-
-# Native tools write progress to stderr; judge them by exit code instead.
-function Run([scriptblock]$cmd) {
-    $ErrorActionPreference = "Continue"
-    & $cmd 2>&1 | ForEach-Object { "$_" }
-    if ($LASTEXITCODE -ne 0) { throw "Failed: $cmd" }
-}
 
 Run { git add -A }
 if (git status --porcelain) { Run { git commit -m "Release v$Version" } }
