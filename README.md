@@ -56,4 +56,4 @@ Start the replay buffer, then press a hotkey or click a length in the dock to sa
 
 ---
 
-The dock uses the [Inter](https://rsms.me/inter/) typeface by The Inter Project Authors, under the SIL Open Font License.
+Licensed under the [GPL-2.0](LICENSE), like OBS Studio. The dock uses the [Inter](https://rsms.me/inter/) typeface by The Inter Project Authors, under the SIL Open Font License.

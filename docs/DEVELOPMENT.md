@@ -34,7 +34,7 @@ That bumps the version in `buildspec.json`, builds, packages `instant-clip-1.2.0
 
 ## Feedback
 
-The **Feedback** card in the dock opens a form (Bug / Idea / Other, message, optional contact). It posts to the relay in `relay/`, a Cloudflare Worker that holds the Discord webhook as a secret, checks a shared key, rate-limits each IP and forwards the message to Discord. The webhook URL never ships in the plugin. See `relay/README.md`.
+The **Feedback** card in the dock opens a form (Bug / Idea / Other, message, optional contact). It posts to the relay in `relay/`, a Cloudflare Worker that holds the Discord webhook as a secret, checks a shared key, rate-limits each IP (3/min) and all senders together (200/day), and forwards the message to Discord. The webhook URL never ships in the plugin. See `relay/README.md`.
 
 ## Build secrets
 

@@ -81,6 +81,21 @@ std::string gh_cli_token()
 	return {};
 }
 
+// GitHub answers 401 to a revoked or expired token even on public repos. Retry without it
+// so a dead token never blocks updates from a public repo.
+HttpResponse github_get(const std::wstring &url, std::vector<std::wstring> headers, QFile *out = nullptr,
+			const std::function<void(uint64_t, uint64_t)> &progress = {})
+{
+	HttpResponse res = http_get(url, headers, out, progress);
+	bool hadAuth =
+		std::erase_if(headers, [](const std::wstring &h) { return h.rfind(L"Authorization:", 0) == 0; }) != 0;
+	if (res.error.empty() && res.status == 401 && hadAuth) {
+		blog(LOG_INFO, "[instant-clip] update token rejected, retrying without it");
+		res = http_get(url, headers, out, progress);
+	}
+	return res;
+}
+
 QString obs_string(void *data, const char *key)
 {
 	return QString::fromUtf8(obs_data_get_string(static_cast<obs_data_t *>(data), key));
@@ -255,7 +270,7 @@ void Updater::check(bool manual)
 			headers.push_back(L"Authorization: Bearer " + QString::fromStdString(tok).toStdWString());
 
 		std::wstring url = L"https://api.github.com/repos/" + repo().toStdWString() + L"/releases/latest";
-		HttpResponse res = http_get(url, headers);
+		HttpResponse res = github_get(url, headers);
 
 		QString err, version, notes, zipUrl, shaUrl, zipName;
 		if (!res.error.empty()) {
@@ -343,7 +358,7 @@ void Updater::download()
 
 		QString err;
 		QByteArray expected;
-		HttpResponse sha = http_get(shaApiUrl_.toStdWString(), headers);
+		HttpResponse sha = github_get(shaApiUrl_.toStdWString(), headers);
 		if (!sha.error.empty() || sha.status != 200)
 			err = "Couldn't download the checksum" +
 			      (sha.error.empty() ? QString(" (HTTP %1)").arg(sha.status) : ": " + QString::fromStdString(sha.error));
@@ -356,7 +371,7 @@ void Updater::download()
 				err = "Couldn't write to " + QDir::toNativeSeparators(out.fileName());
 			} else {
 				double last = 0;
-				HttpResponse zip = http_get(zipApiUrl_.toStdWString(), headers, &out,
+				HttpResponse zip = github_get(zipApiUrl_.toStdWString(), headers, &out,
 							    [this, &last](uint64_t got, uint64_t total) {
 								    if (!total)
 									    return;

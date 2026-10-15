@@ -7,7 +7,8 @@
 // Secrets (set with `npx wrangler secret put <NAME>`):
 //   DISCORD_WEBHOOK  the channel webhook URL
 //   RELAY_KEY        shared key the plugin sends in X-Instant-Clip-Key
-// Binding (wrangler.toml): FEEDBACK_LIMITER, 3 requests per minute per IP.
+// Bindings (wrangler.toml): FEEDBACK_LIMITER, 3 requests per minute per IP;
+// FEEDBACK_COUNTS (KV), the daily total.
 
 const KINDS = {
 	bug: { label: "Bug report", color: 0xf06e6e },
@@ -16,6 +17,18 @@ const KINDS = {
 };
 
 const LIMITS = { message: 2000, contact: 100, version: 40, os: 80 };
+
+// Total messages forwarded per UTC day, across all senders. The per-IP limiter stops one
+// sender; this stops many. KV is eventually consistent, so the cap is approximate.
+const DAILY_LIMIT = 200;
+
+async function overDailyLimit(env) {
+	const key = "count:" + new Date().toISOString().slice(0, 10);
+	const count = Number((await env.FEEDBACK_COUNTS.get(key)) || 0);
+	if (count >= DAILY_LIMIT) return true;
+	await env.FEEDBACK_COUNTS.put(key, String(count + 1), { expirationTtl: 2 * 24 * 60 * 60 });
+	return false;
+}
 
 function json(body, status = 200) {
 	return new Response(JSON.stringify(body), {
@@ -74,6 +87,8 @@ export default {
 		const message = clean(data.message, LIMITS.message);
 		if (message.length < 3) return json({ error: "empty_message" }, 400);
 		const contact = clean(data.contact, LIMITS.contact);
+
+		if (await overDailyLimit(env)) return json({ error: "rate_limited" }, 429);
 
 		const embed = {
 			title: KINDS[kind].label,

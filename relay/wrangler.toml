@@ -13,4 +13,9 @@ namespace_id = "1001"
   limit = 3
   period = 60
 
+# Daily total across everyone (see DAILY_LIMIT in src/worker.js).
+[[kv_namespaces]]
+binding = "FEEDBACK_COUNTS"
+id = "659db2e242e24211b0e99a1588867e0b"
+
 # Secrets (never in this file): DISCORD_WEBHOOK, RELAY_KEY. See relay/README.md.

@@ -1,6 +1,3 @@
-build/
-deps/
-build-test/
 secrets/
 CLAUDE.md
 .deps/
