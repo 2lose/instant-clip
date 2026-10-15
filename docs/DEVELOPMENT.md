@@ -56,16 +56,6 @@ Trimming, update checks and downloads run on worker threads in Windows backgroun
 
 Standard OBS plugin setup from [obs-plugintemplate](https://github.com/obsproject/obs-plugintemplate): `buildspec.json` pins the OBS version (32.2.2) and the matching prebuilt obs-deps/Qt packages. The first `cmake --preset windows-x64` downloads them into `.deps/` and builds libobs and obs-frontend-api; FFmpeg comes from the prebuilt package. To target a newer OBS, update the three versions and hashes in `buildspec.json` (OBS lists its deps versions and hashes in its own `CMakePresets.json`).
 
-`trim-test` is a command-line harness for the trimmer, so you can test cuts without OBS:
-
-```powershell
-cmake --build --preset windows-x64 --target trim-test
-$env:PATH = "C:\Program Files\obs-studio\bin\64bit;$env:PATH"
-.\build_x64\RelWithDebInfo\trim-test.exe "Replay.mkv" out.mp4 mp4 30          # last 30 s
-.\build_x64\RelWithDebInfo\trim-test.exe "Replay.mkv" out.mp4 mp4 30 0 precise
-.\build_x64\RelWithDebInfo\trim-test.exe probe out.mp4                        # streams, timestamps, keyframes
-```
-
 ## Releasing (maintainer)
 
 `scripts/release.ps1 <version> "<notes>"` is the only script, and only needed for publishing. It bumps the version in `buildspec.json`, encrypts the build secrets (`scripts/embed-secrets.ps1`), builds with the preset, packages the zip and `.sha256`, commits, tags, pushes and creates the GitHub release.

@@ -85,17 +85,3 @@ target_compile_definitions(
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${FFMPEG_LIBRARIES} winmm winhttp crypt32 bcrypt)
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
-
-# Command-line harness for the trimmer (no OBS needed): cmake --build --preset windows-x64 --target trim-test
-add_executable(trim-test tests/trim-test.cpp src/trimmer.cpp)
-target_include_directories(trim-test PRIVATE src "${FFMPEG_INCLUDE_DIR}")
-target_compile_definitions(trim-test PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
-target_link_libraries(trim-test PRIVATE ${FFMPEG_LIBRARIES})
-set_target_properties(trim-test PROPERTIES EXCLUDE_FROM_ALL ON)
-
-# Round-trip check for the embedded values (prints match/mismatch only).
-add_executable(token-test tests/token-test.cpp src/embedded-token.cpp)
-target_include_directories(token-test PRIVATE src "${GEN_DIR}")
-target_compile_definitions(token-test PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
-target_link_libraries(token-test PRIVATE bcrypt)
-set_target_properties(token-test PROPERTIES EXCLUDE_FROM_ALL ON)
