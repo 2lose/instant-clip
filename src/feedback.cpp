@@ -1,7 +1,7 @@
 #include "feedback.hpp"
 
 #include "background.hpp"
-#include "embedded-token.hpp"
+#include "embedded-secrets.hpp"
 #include "http.hpp"
 #include "updater.hpp"
 

@@ -1,7 +1,7 @@
-# Release-only: release.ps1 runs this. Encrypts the build's secrets into a generated header
-# (build_x64\gen\embedded-secrets.inc, never committed). Plaintext only lives in git-ignored secrets\*.txt files (or env vars):
+# Release-only: release.ps1 runs this. Encrypts the feedback relay's values into a generated
+# header (build_x64\gen\embedded-secrets.inc, never committed). Plaintext only lives in
+# git-ignored secrets\*.txt files (or env vars):
 #
-#   secrets\update-token.txt         INSTANT_CLIP_UPDATE_TOKEN   read-only token for update checks
 #   secrets\feedback-relay-url.txt   INSTANT_CLIP_FEEDBACK_URL   feedback relay endpoint (Cloudflare Worker)
 #   secrets\feedback-relay-key.txt   INSTANT_CLIP_FEEDBACK_KEY   shared key the relay checks
 #
@@ -48,7 +48,6 @@ function New-Blob([string]$name, [string]$value) {
 }
 
 $values = [ordered]@{
-    kUpdateToken = Get-Secret "update-token.txt" "INSTANT_CLIP_UPDATE_TOKEN"
     kFeedbackUrl = Get-Secret "feedback-relay-url.txt" "INSTANT_CLIP_FEEDBACK_URL"
     kFeedbackKey = Get-Secret "feedback-relay-key.txt" "INSTANT_CLIP_FEEDBACK_KEY"
 }

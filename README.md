@@ -41,7 +41,7 @@ cmake --install build_x64 --config RelWithDebInfo
 
 This copies the plugin to `C:\ProgramData\obs-studio\plugins\instant-clip`. If you get an access error, run the terminal as administrator.
 
-Builds from source don't include the update checker's access token or the feedback form's relay, so those two features stay off. Everything else works the same. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for more.
+Builds from source don't include the feedback form's relay, so the Feedback button is hidden. Everything else, including updates, works the same. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for more.
 
 ## Installing
 

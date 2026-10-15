@@ -36,15 +36,13 @@ foreach(lib IN ITEMS avformat avcodec avutil swscale)
   list(APPEND FFMPEG_LIBRARIES "${FFMPEG_${lib}_LIBRARY}")
 endforeach()
 
-# Encrypted values for official releases (update token, feedback relay). scripts/embed-secrets.ps1
-# writes the real file when publishing; everyone else gets empty values, which just switches
-# off update checks and the Feedback form.
+# Encrypted feedback-relay values for official releases. scripts/embed-secrets.ps1 writes the real
+# file when publishing; everyone else gets empty values, which just hides the Feedback form.
 set(GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/gen")
 if(NOT EXISTS "${GEN_DIR}/embedded-secrets.inc")
   file(
     WRITE "${GEN_DIR}/embedded-secrets.inc"
     "// No embedded secrets in this build.\n"
-    "static const EmbeddedBlob kUpdateToken = {nullptr, 0, {0}, {0}, {0}};\n"
     "static const EmbeddedBlob kFeedbackUrl = {nullptr, 0, {0}, {0}, {0}};\n"
     "static const EmbeddedBlob kFeedbackKey = {nullptr, 0, {0}, {0}, {0}};\n"
   )
@@ -65,8 +63,8 @@ target_sources(
     src/feedback.cpp
     src/feedback.hpp
     src/background.hpp
-    src/embedded-token.cpp
-    src/embedded-token.hpp
+    src/embedded-secrets.cpp
+    src/embedded-secrets.hpp
     src/sound.cpp
     src/sound.hpp
     src/ui/theme.cpp

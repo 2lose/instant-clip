@@ -8,7 +8,7 @@
 #include <mutex>
 #include <thread>
 
-// Checks a private GitHub repo's latest release, downloads the plugin zip on request,
+// Checks the GitHub repo's latest release (public, no login), downloads the plugin zip on request,
 // and installs it after OBS exits (the plugin DLL is locked while OBS runs).
 class Updater : public QObject {
 	Q_OBJECT
@@ -33,10 +33,6 @@ public:
 	void download();
 	void onExit(); // launches the installer if an update is staged
 
-	// Optional token for the private repo, stored encrypted (DPAPI). Empty = use `gh auth token`.
-	bool hasStoredToken() const;
-	void setToken(const QString &token);
-
 	void load(void *data);  // obs_data_t* from the plugin settings
 	void save(void *data) const;
 
@@ -47,7 +43,6 @@ signals:
 private:
 	void setState(State s);
 	void run(std::function<void()> fn);
-	std::string token() const;
 	QString stagingDir() const;
 	QString pluginRoot() const;
 
@@ -62,7 +57,6 @@ private:
 	QString stagedZip_;
 	QString updatedFrom_;
 	QString lastVersionSeen_;
-	QByteArray encryptedToken_;
 	bool manualCheck_ = false;
 
 	QTimer timer_;

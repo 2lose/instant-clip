@@ -1,4 +1,4 @@
-#include "embedded-token.hpp"
+#include "embedded-secrets.hpp"
 
 #include <cstring>
 #include <vector>
@@ -54,8 +54,6 @@ std::string decrypt(const EmbeddedBlob &blob)
 std::string embedded_secret(Secret which)
 {
 	switch (which) {
-	case Secret::UpdateToken:
-		return decrypt(kUpdateToken);
 	case Secret::FeedbackUrl:
 		return decrypt(kFeedbackUrl);
 	case Secret::FeedbackKey:

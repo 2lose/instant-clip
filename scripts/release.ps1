@@ -21,10 +21,8 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.0"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $root
 
-# Releases must carry every embedded value: without the token they can't update on PCs
-# without gh, and without the relay the Feedback button disappears.
+# Releases must carry the relay's values, or the Feedback button disappears.
 $required = @{
-    "update-token.txt"       = "INSTANT_CLIP_UPDATE_TOKEN"
     "feedback-relay-url.txt" = "INSTANT_CLIP_FEEDBACK_URL"
     "feedback-relay-key.txt" = "INSTANT_CLIP_FEEDBACK_KEY"
 }

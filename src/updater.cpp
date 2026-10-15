@@ -2,7 +2,6 @@
 
 #include "background.hpp"
 
-#include "embedded-token.hpp"
 #include "http.hpp"
 
 #include <QCoreApplication>
@@ -16,8 +15,6 @@
 #include <obs-module.h>
 
 #include <windows.h>
-#include <bcrypt.h>
-#include <dpapi.h>
 
 #include <functional>
 #include <string>
@@ -51,49 +48,6 @@ bool newer(const QString &a, const QString &b)
 			return x[i] > y[i];
 	}
 	return false;
-}
-
-QByteArray dpapi(const QByteArray &in, bool protect)
-{
-	DATA_BLOB src{(DWORD)in.size(), (BYTE *)in.data()}, dst{};
-	BOOL ok = protect ? CryptProtectData(&src, L"instant-clip", nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &dst)
-			  : CryptUnprotectData(&src, nullptr, nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &dst);
-	if (!ok)
-		return {};
-	QByteArray result((const char *)dst.pbData, (int)dst.cbData);
-	LocalFree(dst.pbData);
-	return result;
-}
-
-std::string gh_cli_token()
-{
-	for (const QString &program : {QStringLiteral("gh"), QStringLiteral("C:/Program Files/GitHub CLI/gh.exe")}) {
-		QProcess p;
-		p.setCreateProcessArgumentsModifier(
-			[](QProcess::CreateProcessArguments *args) { args->flags |= CREATE_NO_WINDOW; });
-		p.start(program, {"auth", "token", "--hostname", "github.com"});
-		if (!p.waitForFinished(8000) || p.exitCode() != 0)
-			continue;
-		QByteArray token = p.readAllStandardOutput().trimmed();
-		if (!token.isEmpty())
-			return token.toStdString();
-	}
-	return {};
-}
-
-// GitHub answers 401 to a revoked or expired token even on public repos. Retry without it
-// so a dead token never blocks updates from a public repo.
-HttpResponse github_get(const std::wstring &url, std::vector<std::wstring> headers, QFile *out = nullptr,
-			const std::function<void(uint64_t, uint64_t)> &progress = {})
-{
-	HttpResponse res = http_get(url, headers, out, progress);
-	bool hadAuth =
-		std::erase_if(headers, [](const std::wstring &h) { return h.rfind(L"Authorization:", 0) == 0; }) != 0;
-	if (res.error.empty() && res.status == 401 && hadAuth) {
-		blog(LOG_INFO, "[instant-clip] update token rejected, retrying without it");
-		res = http_get(url, headers, out, progress);
-	}
-	return res;
 }
 
 QString obs_string(void *data, const char *key)
@@ -153,7 +107,6 @@ QString Updater::repo()
 void Updater::load(void *data)
 {
 	if (data) {
-		encryptedToken_ = QByteArray::fromBase64(obs_string(data, "update_token").toLatin1());
 		lastVersionSeen_ = obs_string(data, "last_version");
 		QString stagedVersion = obs_string(data, "staged_version");
 		QString stagedZip = obs_string(data, "staged_zip");
@@ -184,35 +137,10 @@ void Updater::load(void *data)
 void Updater::save(void *data) const
 {
 	auto *d = static_cast<obs_data_t *>(data);
-	obs_data_set_string(d, "update_token", encryptedToken_.toBase64().constData());
 	obs_data_set_string(d, "last_version", currentVersion().toUtf8().constData());
 	bool staged = state_ == State::Ready && !stagedZip_.isEmpty();
 	obs_data_set_string(d, "staged_version", staged ? latest_.toUtf8().constData() : "");
 	obs_data_set_string(d, "staged_zip", staged ? stagedZip_.toUtf8().constData() : "");
-}
-
-bool Updater::hasStoredToken() const
-{
-	return !encryptedToken_.isEmpty();
-}
-
-void Updater::setToken(const QString &token)
-{
-	encryptedToken_ = token.trimmed().isEmpty() ? QByteArray() : dpapi(token.trimmed().toUtf8(), true);
-	emit settingsChanged();
-}
-
-std::string Updater::token() const
-{
-	if (!encryptedToken_.isEmpty()) {
-		QByteArray plain = dpapi(encryptedToken_, false);
-		if (!plain.isEmpty())
-			return plain.toStdString();
-	}
-	std::string builtIn = embedded_secret(Secret::UpdateToken);
-	if (!builtIn.empty())
-		return builtIn;
-	return gh_cli_token();
 }
 
 QString Updater::stagingDir() const
@@ -262,25 +190,20 @@ void Updater::check(bool manual)
 		setState(State::Checking);
 
 	run([this] {
-		std::string tok = token();
 		std::vector<std::wstring> headers = {L"Accept: application/vnd.github+json",
 						     L"X-GitHub-Api-Version: 2022-11-28",
 						     (L"User-Agent: instant-clip/" + currentVersion().toStdWString())};
-		if (!tok.empty())
-			headers.push_back(L"Authorization: Bearer " + QString::fromStdString(tok).toStdWString());
 
 		std::wstring url = L"https://api.github.com/repos/" + repo().toStdWString() + L"/releases/latest";
-		HttpResponse res = github_get(url, headers);
+		HttpResponse res = http_get(url, headers);
 
 		QString err, version, notes, zipUrl, shaUrl, zipName;
 		if (!res.error.empty()) {
 			err = QString::fromStdString(res.error);
-		} else if (res.status == 404 || res.status == 401 || res.status == 403) {
-			err = tok.empty() ? "This build has no update access. Rebuild with secrets\\update-token.txt or add a token "
-					    "in Settings > Updates."
-					  : QString("GitHub refused access to %1 (HTTP %2). Check the token.")
-						    .arg(repo())
-						    .arg(res.status);
+		} else if (res.status == 403 || res.status == 429) {
+			err = "GitHub's rate limit was hit. Try again in an hour.";
+		} else if (res.status == 404) {
+			err = QString("No releases found for %1.").arg(repo());
 		} else if (res.status != 200) {
 			err = QString("GitHub returned HTTP %1").arg(res.status);
 		} else {
@@ -350,15 +273,12 @@ void Updater::download()
 
 	QString target = QDir(stagingDir()).filePath(zipName_);
 	run([this, target] {
-		std::string tok = token();
 		std::vector<std::wstring> headers = {L"Accept: application/octet-stream",
 						     (L"User-Agent: instant-clip/" + currentVersion().toStdWString())};
-		if (!tok.empty())
-			headers.push_back(L"Authorization: Bearer " + QString::fromStdString(tok).toStdWString());
 
 		QString err;
 		QByteArray expected;
-		HttpResponse sha = github_get(shaApiUrl_.toStdWString(), headers);
+		HttpResponse sha = http_get(shaApiUrl_.toStdWString(), headers);
 		if (!sha.error.empty() || sha.status != 200)
 			err = "Couldn't download the checksum" +
 			      (sha.error.empty() ? QString(" (HTTP %1)").arg(sha.status) : ": " + QString::fromStdString(sha.error));
@@ -371,7 +291,7 @@ void Updater::download()
 				err = "Couldn't write to " + QDir::toNativeSeparators(out.fileName());
 			} else {
 				double last = 0;
-				HttpResponse zip = github_get(zipApiUrl_.toStdWString(), headers, &out,
+				HttpResponse zip = http_get(zipApiUrl_.toStdWString(), headers, &out,
 							    [this, &last](uint64_t got, uint64_t total) {
 								    if (!total)
 									    return;

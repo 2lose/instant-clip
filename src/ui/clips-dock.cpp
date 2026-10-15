@@ -215,9 +215,6 @@ void ClipsDock::refreshUpdate()
 		updateBox_->setVisible(banner);
 
 	updateStatus_->setText(status);
-	tokenEdit_->setPlaceholderText(u->hasStoredToken() ? "Token saved (hidden)" : "Override token (optional)");
-	if (auto *clear = findChild<QWidget *>("ICClearToken"))
-		clear->setVisible(u->hasStoredToken());
 }
 
 void ClipsDock::paintEvent(QPaintEvent *)
@@ -528,33 +525,9 @@ QWidget *ClipsDock::buildSettings()
 	v->addSpacing(8);
 	updateStatus_ = hintLabel({});
 	v->addWidget(updateStatus_);
-	v->addSpacing(10);
-	tokenEdit_ = new QLineEdit;
-	tokenEdit_->setObjectName("ICPath");
-	tokenEdit_->setEchoMode(QLineEdit::Password);
-	tokenEdit_->setMinimumWidth(60);
-	connect(tokenEdit_, &QLineEdit::editingFinished, this, [this] {
-		QString token = tokenEdit_->text().trimmed();
-		if (token.isEmpty())
-			return;
-		m_->updater()->setToken(token);
-		tokenEdit_->clear();
-		refreshUpdate();
-		m_->updater()->check(true);
-	});
-	v->addWidget(tokenEdit_);
-	v->addSpacing(8);
-	v->addWidget(hintLabel(QString("Updates from %1 use the access built into this plugin. Paste a token only to "
-				       "override it; it's stored encrypted for your Windows account.")
+	v->addSpacing(6);
+	v->addWidget(hintLabel(QString("New versions come from github.com/%1 and install when you close OBS.")
 				       .arg(Updater::repo())));
-	auto *clearToken = new PillButton("Forget saved token", PillButton::Kind::Link);
-	connect(clearToken, &QAbstractButton::clicked, this, [this] {
-		m_->updater()->setToken({});
-		refreshUpdate();
-	});
-	clearToken->setObjectName("ICClearToken");
-	v->addSpacing(4);
-	v->addWidget(clearToken, 0, Qt::AlignLeft);
 
 	v->addStretch(1);
 	return scrollPage(page);
